@@ -278,13 +278,26 @@ public class PluginUtil {
         Plugin target = null;
 
         File pluginDir = new File("plugins");
+        // caramel start - support "add-plugin" argument
+        final List<File> list = new ArrayList<>(Arrays.asList(pluginDir.listFiles())); // ...
+        try {
+            final Class serverClass = Class.forName("net.minecraft.server.MinecraftServer");
+            final java.lang.reflect.Method serverMtd = serverClass.getMethod("getServer");
+            serverMtd.setAccessible(true);
+            final Object serverObj = serverMtd.invoke(serverClass);
+            final Field optionFld = serverClass.getField("options");
+            final Object optionObj = optionFld.get(serverObj);
+            final java.lang.reflect.Method values = optionObj.getClass().getMethod("valuesOf", String.class);
+            list.addAll((List<File>) values.invoke(optionObj, "add-plugin"));
+        } catch (Exception ignored) { /* Older Version Server? haha */ }
+        // caramel end - support "add-plugin" argument
 
         if (!pluginDir.isDirectory())
             return PlugMan.getInstance().getMessageFormatter().format("load.plugin-directory");
 
         File pluginFile = new File(pluginDir, name + ".jar");
 
-        if (!pluginFile.isFile()) for (File f : pluginDir.listFiles())
+        if (!pluginFile.isFile()) for (File f : list) // caramel - support "add-plugin" argument
             if (f.getName().endsWith(".jar")) try {
                 PluginDescriptionFile desc = PlugMan.getInstance().getPluginLoader().getPluginDescription(f);
                 if (desc.getName().equalsIgnoreCase(name)) {
